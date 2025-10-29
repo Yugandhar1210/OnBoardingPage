@@ -32,12 +32,17 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,6 +59,9 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -65,19 +73,31 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.launch
 import com.example.onboardingpage.GradientPillButton
 import com.example.onboardingpage.tweak.components.AddPhotoTile
 import com.example.onboardingpage.tweak.components.GlassCard
 import com.example.onboardingpage.tweak.components.PercentProgressStrip
-import com.example.onboardingpage.tweak.components.RoundedTextField
-import kotlinx.coroutines.launch
+import com.example.onboardingpage.ui.theme.OnBoardingPageTheme
+import androidx.compose.material3.TextButton
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -177,9 +197,11 @@ fun TweakProfileScreen(onBack: () -> Unit, vm: TweakProfileViewModel = viewModel
             // Glow Check
             SectionHeader("Glow Check (Verification)", "Send in your best-lit selfie for quick verification.")
             GlassCard {
-                OutlinedButton(onClick = { cameraLauncher.launch(null) }, shape = RoundedCornerShape(16.dp)) {
-                    Text("Open Camera")
-                }
+                GradientOutlineButton(
+                    text = "Open Camera",
+                    leading = Icons.Filled.PhotoCamera,
+                    onClick = { cameraLauncher.launch(null) }
+                )
                 Spacer(Modifier.height(12.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("${(vm.verificationProgress * 100).toInt()}%", color = Color(0xFF8A65FF))
@@ -187,19 +209,167 @@ fun TweakProfileScreen(onBack: () -> Unit, vm: TweakProfileViewModel = viewModel
                     PercentProgressStrip(progress = vm.verificationProgress, modifier = Modifier.weight(1f))
                 }
             }
-
-            // Personal Info
+// Personal Info
             SectionHeader("Personal Info", "Tell us about yourself")
+
             GlassCard {
-                RoundedTextField(vm.fullName, { vm.fullName = it }, "Enter your full name")
+                val placeholderColor = Color(0xFFB8B7C0)
+                val iconGradient = Brush.horizontalGradient(listOf(Color(0xFF4C00FF), Color(0xFFFF4D97)))
+
+                // --- Full Name ---
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        GradientIcon(
+                            icon = Icons.Filled.Person,
+                            brush = iconGradient,
+                            size = 20.dp
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "Full Name",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = vm.fullName,
+                        onValueChange = { vm.fullName = it },
+                        placeholder = {
+                            Text(
+                                "Enter your full name",
+                                color = placeholderColor,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        },
+                        singleLine = true,
+                        textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        isError = vm.showValidationErrors && vm.fullName.isBlank(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = Color(0x338A65FF),
+                            unfocusedBorderColor = Color(0x22545460),
+                            cursorColor = Color(0xFF8A65FF),
+                            focusedContainerColor = Color(0x551A1A1F),
+                            unfocusedContainerColor = Color(0x401A1A1F),
+                            focusedPlaceholderColor = placeholderColor,
+                            unfocusedPlaceholderColor = placeholderColor
+                        )
+                    )
+                }
+
                 Spacer(Modifier.height(12.dp))
-                RoundedTextField(vm.bio, { vm.bio = it }, "Add your bio", singleLine = false)
+
+                // --- Bio ---
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        GradientIcon(
+                            icon = Icons.Filled.Edit,
+                            brush = iconGradient,
+                            size = 20.dp
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "Bio",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = vm.bio,
+                        onValueChange = { vm.bio = it },
+                        placeholder = {
+                            Text(
+                                "Add your bio",
+                                color = placeholderColor,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        },
+                        singleLine = false,
+                        minLines = 3,
+                        textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        isError = vm.showValidationErrors && vm.bio.isBlank(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = Color(0x338A65FF),
+                            unfocusedBorderColor = Color(0x22545460),
+                            cursorColor = Color(0xFF8A65FF),
+                            focusedContainerColor = Color(0x551A1A1F),
+                            unfocusedContainerColor = Color(0x401A1A1F),
+                            focusedPlaceholderColor = placeholderColor,
+                            unfocusedPlaceholderColor = placeholderColor
+                        )
+                    )
+                }
+
                 Spacer(Modifier.height(12.dp))
-                RoundedTextField(vm.email, { vm.email = it }, "Enter your email")
+
+                // --- Email ---
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        GradientIcon(
+                            icon = Icons.Filled.Email,
+                            brush = iconGradient,
+                            size = 20.dp
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "Email",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    OutlinedTextField(
+                        value = vm.email,
+                        onValueChange = { vm.email = it },
+                        placeholder = {
+                            Text(
+                                "Enter your email",
+                                color = placeholderColor,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        },
+                        singleLine = true,
+                        textStyle = TextStyle(color = Color.White, fontSize = 14.sp),
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        isError = vm.showValidationErrors && vm.email.isBlank(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = Color(0x338A65FF),
+                            unfocusedBorderColor = Color(0x22545460),
+                            cursorColor = Color(0xFF8A65FF),
+                            focusedContainerColor = Color(0x551A1A1F),
+                            unfocusedContainerColor = Color(0x401A1A1F),
+                            focusedPlaceholderColor = placeholderColor,
+                            unfocusedPlaceholderColor = placeholderColor
+                        )
+                    )
+                }
             }
 
-            // Gender & Birthday row
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            Spacer(Modifier.height(14.dp))
+
+// Gender & Birthday row
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Column(modifier = Modifier.weight(1f)) {
                     FieldLabel("Gender")
                     GenderDropdownField(current = vm.gender, onSelected = { vm.updateGender(it) })
@@ -223,17 +393,70 @@ fun TweakProfileScreen(onBack: () -> Unit, vm: TweakProfileViewModel = viewModel
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column { Text("Select Activities", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold); Text("Choose activities you're interested in", color = Color(0xFFB8B7C0)) }
-                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color(0xFFB8B7C0))
+                    Column {
+                        Text(
+                            "Select Activities",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "Choose activities you're interested in",
+                            fontSize = 12.sp,
+                            color = Color(0xFFB8B7C0)
+                        )
+                    }
+
+                    // Transparent icon with gradient circular ring
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .background(
+                                brush = Brush.sweepGradient(
+                                    listOf(
+                                        Color(0xFF4C00FF),
+                                        Color(0xFFFF4D97),
+                                        Color(0xFF4C00FF)
+                                    )
+                                ),
+                                shape = CircleShape
+                            )
+                            .padding(2.dp) // thickness of the gradient ring
+                            .background(Color.Transparent, shape = CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.ChevronRight,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.8f), // Slightly visible or transparent effect
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
+
 
             Spacer(Modifier.height(90.dp))
         }
 
         if (showActivities) {
-            ModalBottomSheet(onDismissRequest = { showActivities = false }, sheetState = sheetState, containerColor = Color(0xFF10131A)) {
-                ActivitiesSheet(vm) { showActivities = false }
+            LaunchedEffect(Unit) {
+                sheetState.show()
+            }
+            ModalBottomSheet(
+                onDismissRequest = {
+                    scope.launch {
+                        sheetState.hide()
+                    }.invokeOnCompletion { showActivities = false }
+                },
+                sheetState = sheetState,
+                containerColor = Color(0xFF10131A)
+            ) {
+                ActivitiesSheet(vm) {
+                    scope.launch {
+                        sheetState.hide()
+                    }.invokeOnCompletion { showActivities = false }
+                }
             }
         }
     }
@@ -303,7 +526,7 @@ private fun GenderDropdownField(current: String?, onSelected: (String) -> Unit) 
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Text(current ?: "Gender", color = Color(0xFFB8B7C0))
             Spacer(Modifier.weight(1f))
-            Icon(Icons.Outlined.ExpandMore, contentDescription = null, tint = Color(0xFFB8B7C0))
+            GradientIcon(Icons.Outlined.ExpandMore, brush = Brush.horizontalGradient(listOf(Color(0xFF4C00FF), Color(0xFFFF4D97))))
         }
 
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -334,30 +557,154 @@ private fun BirthdayPickerField(currentText: String?, onSelectedText: (String) -
             .fillMaxWidth()
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Text(currentText ?: "Select Date of...", color = Color(0xFFB8B7C0))
+            val gradientText = Brush.horizontalGradient(listOf(Color(0xFF4C00FF), Color(0xFFFF4D97)))
+            if (currentText.isNullOrBlank()) {
+                Text("Select Date of...", color = Color(0xFFB8B7C0))
+            } else {
+                val annotated = buildAnnotatedString {
+                    withStyle(SpanStyle(brush = gradientText, fontWeight = FontWeight.Medium)) {
+                        append(currentText)
+                    }
+                }
+                Text(annotated, color = Color.Unspecified)
+            }
             Spacer(Modifier.weight(1f))
-            Icon(Icons.Default.CalendarMonth, contentDescription = null, tint = Color(0xFFB8B7C0))
+            GradientIcon(Icons.Default.CalendarMonth, brush = Brush.horizontalGradient(listOf(Color(0xFF4C00FF), Color(0xFFFF4D97))))
         }
     }
 
     if (show) {
+        val ctaGradient = Brush.horizontalGradient(listOf(Color(0xFF4C00FF), Color(0xFFFF4D97)))
         DatePickerDialog(
             onDismissRequest = { show = false },
             confirmButton = {
-                OutlinedButton(onClick = {
+                TextButton(onClick = {
                     val millis = state.selectedDateMillis
                     if (millis != null) {
                         val text = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate().format(formatter)
                         onSelectedText(text)
                     }
                     show = false
-                }) { Text("OK") }
+                }) {
+                    val ok = buildAnnotatedString {
+                        withStyle(SpanStyle(brush = ctaGradient, fontWeight = FontWeight.SemiBold)) { append("OK") }
+                    }
+                    Text(ok, color = Color.Unspecified, fontSize = 14.sp)
+                }
             },
             dismissButton = {
-                OutlinedButton(onClick = { show = false }) { Text("Cancel") }
+                TextButton(onClick = { show = false }) {
+                    val cancel = buildAnnotatedString {
+                        withStyle(SpanStyle(brush = ctaGradient, fontWeight = FontWeight.SemiBold)) { append("Cancel") }
+                    }
+                    Text(cancel, color = Color.Unspecified, fontSize = 14.sp)
+                }
             }
         ) {
             DatePicker(state = state)
+        }
+    }
+}
+
+@Composable
+private fun GradientIcon(
+    icon: ImageVector,
+    brush: Brush,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null,
+    size: Dp = 24.dp,
+    showBackground: Boolean = false,
+    backgroundBrush: Brush = brush,
+    backgroundPadding: Dp = 2.dp,
+    iconVisible: Boolean = true
+) {
+    val container = modifier
+        .size(size)
+        .let { base ->
+            if (showBackground) base
+                .clip(CircleShape)
+                .background(backgroundBrush)
+            else base
+        }
+
+    Box(modifier = container, contentAlignment = Alignment.Center) {
+        if (iconVisible) {
+            val innerSize = if (showBackground && size > backgroundPadding * 2) size - (backgroundPadding * 2) else size
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                modifier = Modifier
+                    .size(innerSize)
+                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                    .drawWithCache {
+                        onDrawWithContent {
+                            // Draw the icon first, then apply gradient masked to its alpha
+                            drawContent()
+                            drawRect(brush = brush, blendMode = BlendMode.SrcIn)
+                        }
+                    },
+                tint = Color.White
+            )
+        }
+        // else: icon transparent/invisible; only background circle is shown
+    }
+}
+@Composable
+private fun GradientOutlineButton(text: String, leading: ImageVector? = null, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(16.dp)
+    val brush = Brush.horizontalGradient(listOf(Color(0xFF4C00FF), Color(0xFFFF4D97)))
+    Box(
+        modifier = Modifier
+            .clip(shape)
+            .border(2.dp, brush, shape)
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (leading != null) {
+                GradientIcon(leading, brush = brush)
+            }
+            Text(text, color = Color.White, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Preview(showBackground = true, name = "Open Camera Button")
+@Composable
+private fun OpenCameraButtonPreview() {
+    OnBoardingPageTheme {
+        GlassCard {
+            GradientOutlineButton(text = "Open Camera", leading = Icons.Filled.PhotoCamera, onClick = {})
+        }
+    }
+}
+
+@Preview(showBackground = true, name = "Activities Row")
+@Composable
+private fun ActivitiesRowPreview() {
+    OnBoardingPageTheme {
+        GlassCard {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0x331A1A1F))
+                    .padding(18.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text("Select Activities", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Choose activities you're interested in", fontSize = 12.sp, color = Color(0xFFB8B7C0))
+                }
+                GradientIcon(
+                    icon = Icons.Filled.ChevronRight,
+                    brush = Brush.horizontalGradient(listOf(Color(0xFF4C00FF), Color(0xFFFF4D97))),
+                    size = 32.dp
+                )
+            }
         }
     }
 }
@@ -370,3 +717,75 @@ private fun FlowRowWrap(spacing: Int = 8, content: @Composable () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(spacing.dp)
     ) { content() }
 }
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Preview(showBackground = true)
+@Composable
+private fun TweakProfileScreenPreview() {
+    OnBoardingPageTheme {
+        // Use a local instance of the ViewModel for preview purposes
+        val vm = remember { TweakProfileViewModel() }
+        TweakProfileScreen(onBack = {}, vm = vm)
+    }
+}
+
+//@RequiresApi(Build.VERSION_CODES.O)
+//@Preview(showBackground = true, name = "TweakProfile - Empty")
+//@Composable
+//private fun TweakProfileScreenPreviewEmpty() {
+//    OnBoardingPageTheme {
+//        val vm = remember { TweakProfileViewModel() }
+//        // leave defaults: 0 images, not verified
+//        TweakProfileScreen(onBack = {}, vm = vm)
+//    }
+//}
+//
+//@RequiresApi(Build.VERSION_CODES.O)
+//@Preview(showBackground = true, name = "TweakProfile - 3 Photos")
+//@Composable
+//private fun TweakProfileScreenPreviewThree() {
+//    OnBoardingPageTheme {
+//        val vm = remember { TweakProfileViewModel() }
+//        val sample = listOf(
+//            Uri.parse("https://picsum.photos/seed/1/400"),
+//            Uri.parse("https://picsum.photos/seed/2/400"),
+//            Uri.parse("https://picsum.photos/seed/3/400")
+//        )
+//        vm.addImages(sample)
+//        vm.fullName = "Alex Johnson"
+//        vm.bio = "Explorer. Music lover. Weekend hiker."
+//        vm.email = "alex@example.com"
+//        vm.updateGender("Male")
+//        vm.updateBirthday("Aug 21, 1997")
+//        vm.toggleActivity("Music")
+//        vm.toggleActivity("Hiking")
+//        TweakProfileScreen(onBack = {}, vm = vm)
+//    }
+//}
+//
+//@RequiresApi(Build.VERSION_CODES.O)
+//@Preview(showBackground = true, name = "TweakProfile - Full Verified (5)")
+//@Composable
+//private fun TweakProfileScreenPreviewFull() {
+//    OnBoardingPageTheme {
+//        val vm = remember { TweakProfileViewModel() }
+//        val sample = listOf(
+//            Uri.parse("https://picsum.photos/seed/11/400"),
+//            Uri.parse("https://picsum.photos/seed/12/400"),
+//            Uri.parse("https://picsum.photos/seed/13/400"),
+//            Uri.parse("https://picsum.photos/seed/14/400"),
+//            Uri.parse("https://picsum.photos/seed/15/400")
+//        )
+//        vm.addImages(sample)
+//        vm.fullName = "Jamie Rivera"
+//        vm.bio = "Designer • Runner • Reader"
+//        vm.email = "jamie@rivera.dev"
+//        vm.updateGender("Non-binary")
+//        vm.updateBirthday("Jan 5, 1994")
+//        vm.toggleActivity("Art")
+//        vm.toggleActivity("Travel")
+//        vm.markVerified()
+//        TweakProfileScreen(onBack = {}, vm = vm)
+//    }
+//}
+

@@ -25,7 +25,8 @@ fun GlassCard(
     modifier: Modifier = Modifier,
     corner: Int = 20,
     frosted: Boolean = false, // when true, applies a content blur (not backdrop) — default off to keep text crisp
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
+    
 ) {
     val shape = RoundedCornerShape(corner.dp)
     val glass = Color(0x731A1A1F) // #1A1A1F with ~0.45 alpha

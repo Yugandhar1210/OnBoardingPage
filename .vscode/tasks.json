@@ -1,0 +1,18 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Assemble Debug (verify previews)",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"gradlew.bat :app:assembleDebug"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$gradle"
+			]
+		}
+	]
+}

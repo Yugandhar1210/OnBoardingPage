@@ -51,6 +51,8 @@ import androidx.compose.ui.Alignment
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import androidx.navigation.compose.rememberNavController
 import com.example.onboardingpage.ui.theme.OnBoardingPageTheme
 import com.example.onboardingpage.tweak.TweakProfileScreen
@@ -72,7 +74,29 @@ class MainActivity : ComponentActivity() {
 fun AppNavHost(navController: NavHostController) {
     NavHost(navController = navController, startDestination = "main") {
         composable("main") {
-            MainScreen(onContinue = { navController.navigate("tweak_profile") })
+            MainScreen(onContinue = { navController.navigate("login") })
+        }
+        composable("login") {
+            com.example.onboardingpage.login.LoginScreen(
+                onBack = { navController.popBackStack() },
+                onContinue = { phone -> navController.navigate("otp/$phone") }
+            )
+        }
+        composable(
+            route = "otp/{phone}",
+            arguments = listOf(navArgument("phone") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val phone = backStackEntry.arguments?.getString("phone") ?: ""
+            com.example.onboardingpage.login.OtpScreen(
+                phone = phone,
+                onBack = { navController.popBackStack() },
+                onVerified = {
+                    navController.navigate("tweak_profile") {
+                        launchSingleTop = true
+                        popUpTo("main") { inclusive = false }
+                    }
+                }
+            )
         }
         composable("tweak_profile") {
             TweakProfileScreen(onBack = { navController.popBackStack() })
@@ -130,28 +154,19 @@ fun GradientPillButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val infinite = rememberInfiniteTransition(label = "cta")
-    val shift by infinite.animateFloat(initialValue = 0f, targetValue = 1f, animationSpec = infiniteRepeatable(tween(5000)), label = "shift")
     val colors = listOf(Color(0xFF2E3BFF), Color(0xFFFF3FD8))
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val scale by androidx.compose.animation.core.animateFloatAsState(targetValue = if (pressed) 0.98f else 1f, label = "press")
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .fillMaxWidth()
             .padding(8.dp)
-            .graphicsLayer { scaleX = scale; scaleY = scale }
             .background(
-                brush = Brush.horizontalGradient(colors, startX = -300f + 600f * shift, endX = 600f * (1 + shift)),
+                brush = Brush.horizontalGradient(colors),
                 shape = RoundedCornerShape(34.dp)
             )
             .clip(RoundedCornerShape(34.dp))
-            .clickable(
-                interactionSource = interaction,
-                indication = null
-            ) { onClick() }
+            .clickable { onClick() }
             .padding(vertical = 18.dp)
     ) {
         Text(text = text, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
