@@ -1,9 +1,11 @@
 package com.example.onboardingpage
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,8 +58,13 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.rememberNavController
 import com.example.onboardingpage.ui.theme.OnBoardingPageTheme
 import com.example.onboardingpage.tweak.TweakProfileScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.onboardingpage.activities.ui.SelectActivitiesScreen
+import com.example.onboardingpage.tweak.TweakProfileViewModel
 
 class MainActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -70,6 +77,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AppNavHost(navController: NavHostController) {
     NavHost(navController = navController, startDestination = "main") {
@@ -98,8 +106,32 @@ fun AppNavHost(navController: NavHostController) {
                 }
             )
         }
-        composable("tweak_profile") {
-            TweakProfileScreen(onBack = { navController.popBackStack() })
+        composable("tweak_profile") { backStackEntry ->
+            val vm: TweakProfileViewModel = viewModel()
+
+            // Listen for results from the SelectActivitiesScreen
+            val selectedResultFlow = backStackEntry.savedStateHandle.getStateFlow<List<String>?>("selectedActivities", null)
+            val selectedResult = selectedResultFlow.collectAsStateWithLifecycle(initialValue = null).value
+            if (selectedResult != null) {
+                vm.setActivities(selectedResult.toSet())
+                backStackEntry.savedStateHandle["selectedActivities"] = null
+            }
+
+            TweakProfileScreen(
+                onBack = { navController.popBackStack() },
+                onOpenActivities = { navController.navigate("select_activities") },
+                vm = vm
+            )
+        }
+
+        composable("select_activities") {
+            SelectActivitiesScreen(
+                onBack = { navController.popBackStack() },
+                onDone = { ids ->
+                    navController.previousBackStackEntry?.savedStateHandle?.set("selectedActivities", ids)
+                    navController.popBackStack()
+                }
+            )
         }
     }
 }

@@ -105,7 +105,11 @@ import java.time.format.DateTimeFormatter
 @RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TweakProfileScreen(onBack: () -> Unit, vm: TweakProfileViewModel = viewModel()) {
+fun TweakProfileScreen(
+    onBack: () -> Unit,
+    onOpenActivities: () -> Unit = {},
+    vm: TweakProfileViewModel = viewModel()
+) {
     val context = LocalContext.current
 
     val gradientBg = Brush.verticalGradient(
@@ -123,9 +127,7 @@ fun TweakProfileScreen(onBack: () -> Unit, vm: TweakProfileViewModel = viewModel
         if (bmp != null) Toast.makeText(context, "Verification added", Toast.LENGTH_SHORT).show()
     }
 
-    var showActivities by remember { mutableStateOf(false) }
-    val sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
+    // Activities selection is now a separate page; bottom sheet removed.
 
     Scaffold(
         topBar = {
@@ -388,7 +390,7 @@ fun TweakProfileScreen(onBack: () -> Unit, vm: TweakProfileViewModel = viewModel
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
                         .background(Color(0x331A1A1F))
-                        .clickable { showActivities = true }
+                        .clickable { onOpenActivities() }
                         .padding(18.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
@@ -438,53 +440,10 @@ fun TweakProfileScreen(onBack: () -> Unit, vm: TweakProfileViewModel = viewModel
 
             Spacer(Modifier.height(90.dp))
         }
-
-        if (showActivities) {
-            LaunchedEffect(Unit) {
-                sheetState.show()
-            }
-            ModalBottomSheet(
-                onDismissRequest = {
-                    scope.launch {
-                        sheetState.hide()
-                    }.invokeOnCompletion { showActivities = false }
-                },
-                sheetState = sheetState,
-                containerColor = Color(0xFF10131A)
-            ) {
-                ActivitiesSheet(vm) {
-                    scope.launch {
-                        sheetState.hide()
-                    }.invokeOnCompletion { showActivities = false }
-                }
-            }
-        }
     }
 }
 
-@Composable
-private fun ActivitiesSheet(vm: TweakProfileViewModel, onDone: () -> Unit) {
-    val all = listOf("Hiking", "Music", "Gaming", "Cooking", "Art", "Movies", "Travel")
-    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Select Activities", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-        FlowRowWrap(spacing = 8) {
-            all.forEach { tag ->
-                val selected = vm.selectedActivities.contains(tag)
-                val bg = if (selected) Brush.horizontalGradient(listOf(Color(0xFF4C00FF), Color(0xFFFF4D97))) else null
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(bg ?: Brush.horizontalGradient(listOf(Color(0x331A1A1F), Color(0x331A1A1F))))
-                        .clickable { vm.toggleActivity(tag) }
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
-                ) { Text(tag, color = Color.White) }
-            }
-        }
-        Spacer(Modifier.height(12.dp))
-        com.example.onboardingpage.GradientPillButton(text = "Done", onClick = { onDone() })
-        Spacer(Modifier.height(8.dp))
-    }
-}
+// Bottom sheet removed; activities selection is now a separate page.
 
 @Composable
 private fun SectionHeader(title: String, subtitle: String) {
@@ -574,36 +533,29 @@ private fun BirthdayPickerField(currentText: String?, onSelectedText: (String) -
     }
 
     if (show) {
-        val ctaGradient = Brush.horizontalGradient(listOf(Color(0xFF4C00FF), Color(0xFFFF4D97)))
         DatePickerDialog(
             onDismissRequest = { show = false },
             confirmButton = {
                 TextButton(onClick = {
                     val millis = state.selectedDateMillis
                     if (millis != null) {
-                        val text = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDate().format(formatter)
+                        val text = Instant.ofEpochMilli(millis)
+                            .atZone(ZoneId.systemDefault())
+                            .toLocalDate()
+                            .format(formatter)
                         onSelectedText(text)
                     }
                     show = false
-                }) {
-                    val ok = buildAnnotatedString {
-                        withStyle(SpanStyle(brush = ctaGradient, fontWeight = FontWeight.SemiBold)) { append("OK") }
-                    }
-                    Text(ok, color = Color.Unspecified, fontSize = 14.sp)
-                }
+                }) { Text("OK") }
             },
             dismissButton = {
-                TextButton(onClick = { show = false }) {
-                    val cancel = buildAnnotatedString {
-                        withStyle(SpanStyle(brush = ctaGradient, fontWeight = FontWeight.SemiBold)) { append("Cancel") }
-                    }
-                    Text(cancel, color = Color.Unspecified, fontSize = 14.sp)
-                }
+                TextButton(onClick = { show = false }) { Text("Cancel") }
             }
         ) {
             DatePicker(state = state)
         }
     }
+
 }
 
 @Composable
@@ -638,7 +590,6 @@ private fun GradientIcon(
                     .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
                     .drawWithCache {
                         onDrawWithContent {
-                            // Draw the icon first, then apply gradient masked to its alpha
                             drawContent()
                             drawRect(brush = brush, blendMode = BlendMode.SrcIn)
                         }
@@ -646,7 +597,6 @@ private fun GradientIcon(
                 tint = Color.White
             )
         }
-        // else: icon transparent/invisible; only background circle is shown
     }
 }
 @Composable
@@ -709,14 +659,7 @@ private fun ActivitiesRowPreview() {
     }
 }
 
-// Simple wrap row for chips
-@Composable
-private fun FlowRowWrap(spacing: Int = 8, content: @Composable () -> Unit) {
-    androidx.compose.foundation.layout.FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(spacing.dp),
-        verticalArrangement = Arrangement.spacedBy(spacing.dp)
-    ) { content() }
-}
+// FlowRow helper removed (unused after bottom sheet deletion).
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Preview(showBackground = true)

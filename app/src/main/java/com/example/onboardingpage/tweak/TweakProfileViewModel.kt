@@ -48,6 +48,10 @@ class TweakProfileViewModel : ViewModel() {
         selectedActivities = if (selectedActivities.contains(tag)) selectedActivities - tag else selectedActivities + tag
     }
 
+    fun setActivities(newSet: Set<String>) {
+        selectedActivities = newSet
+    }
+
     fun validate(): Boolean {
         val ok = fullName.isNotBlank() && bio.isNotBlank() && email.contains("@") && gender != null && birthday != null && images.isNotEmpty() && verificationProgress >= 1f && selectedActivities.isNotEmpty()
         showValidationErrors = !ok
